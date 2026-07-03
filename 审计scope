@@ -1,0 +1,80 @@
+作为Sui Move审计员，你的Scope就是 .move 文件。但ZK项目完全不是这样，如果你只盯着 .circom 文件看，相当于只看了“法律条文”，却放跑了“执行法律的人”和“判决结果的法官”。
+
+为了让你彻底搞懂Scope，我们直接把ZK项目拆解成 “4个文件夹”。你接到单子后，就按这个清单去翻项目根目录。
+
+1. 你的 ZK 审计 Scope（宏观清单）
+类比Sui Move（合约 = 规则），ZK的Scope必须包含以下4个必须审查的工件：
+
+审计对象	                             类比Sui Move	                  文件后缀/位置	                                                       它的“死罪”是什么？
+① 电路约束	                           核心 .move 文件	                .circom / .go (Gnark) / .r1cs	                                       逻辑漏写（如没约束除法非零）
+② Witness 生成器	                    （Sui没有此层）后台脚本	          /js/generate_witness.js /python/compute.py /src/witness.rs	         计算作弊（算错答案但能通过约束）
+③ 链上验证合约	                       入口函数 entry fun	            Verifier.sol (Solidity)	                                             传参错误（把公开输入传反了）
+④ 公共输入(Public Input)组装	         交易构造(Txn Builder)	          input.json 或 main.ts 里的 publicSignals	                             域爆炸（把大数当小数传进去）
+
+2. 手把手教你“在哪里看 Witness”（针对你第一个问题）
+你问“Witness我去哪里看”，我直接告诉你绝对不在 .circom 文件里。
+
+在真实项目里，Witness生成逻辑通常藏在 /src 或 /scripts 目录下。以你看的那个质数教程为例，实际项目结构是这样的：
+
+· circuit/prime.circom：只写约束（比如 out === input * input）。
+
+· scripts/generate_witness.py（或 .js）：这里就是你要找的Witness逻辑！
+
+打开这个Python文件，你会看到类似这样的代码：
+
+python
+# 这是 Witness 生成器（审计员必须死死盯住这里！）
+def generate_witness(secret_number):
+    # 注意：这里可能没有任何约束！
+    # 如果开发者使坏，他会在下面偷偷加料：
+    if secret_number == 某个特殊值:
+        result = 0  # 让结果归零，绕过约束
+    else:
+        result = secret_number * secret_number
+    return result
+
+审计实战操作：你拿到项目后，用grep -r "generateWitness" 或查看 package.json 里的 "build" 和 "witness" 脚本命令，定位到这个文件。你必须像读电路一样仔细读这份代码，因为如果它算出来的Witness是错的，后面所有约束都是在“约束一个错误的结果”。
+
+3. 拆解“Circom + Python + SnarkJS”宏观流程（针对你第二个问题）
+我用“法庭审判”来类比，你就全懂了：
+
+(1) Circom 写电路（立法）：
+法官（验证者）手里拿着一张法律卡片，上面刻着 c === a * b。这条法律永远不变。
+
+(2) Python/JS 生成 Witness（被告人准备证词）：
+Python脚本干两件事：
+
+· 计算：算出 a=3, b=11, c=33。
+
+· 打包成Witness：把 [33, 3, 11] 打包成一份“证词密封袋”（Witness文件，通常是 .wtns 格式）。
+注意：Python算错了，袋子里装的就是假证词。
+
+(3) SnarkJS 生成证明（律师整理卷宗）：
+SnarkJS 拿着“法律卡片”（约束）和“证词密封袋”（Witness）进行交叉比对。
+
+· 比对 c === a * b（33 === 3 * 11），成立。
+
+· 生成一份《证明报告》（Proof）。
+
+你问为什么教程交Python？ 因为教程里，02_Prime 那节课的Python代码，就是上面第2步“生成证词（Witness）”的前置算法。它告诉你怎么在链下找出那个质数。没有这段Python，你就不知道往Witness生成器里填什么数字。
+
+4. 给“Sui Move审计员”的专属Scope策略
+作为Sui审计员，你习惯了“只要合约没Bug，项目就安全”。但在ZK里，攻击者可以不动合约，不改电路，只篡改Python脚本，就能偷走资金。
+
+所以你的审计工作流必须改成 “数据流追踪”：
+
+第一步（找入口）：看 input.json 或前端代码，搞清楚用户输入的 a（私有输入） 和 b（公开输入） 分别是什么。
+
+第二步（抓计算）：去 /scripts 或 /src 下，找到生成Witness的脚本。重点检查：它是否对输入做了“范围检查”（比如 assert(secret < P)）？它是否在计算过程中偷偷截断了小数？
+
+第三步（对规则）：打开 .circom，看它的约束逻辑，是否和第二步的计算逻辑完全对等？如果Python里用到了除法，但Circom里没约束分母非零，直接报高危漏洞。
+
+第四步（查上链）：打开 Verifier.sol，检查 verifyProof 函数传入的 publicInputs 数组，是否和Circom顶层文件里定义的 public 信号顺序、个数完全一致。顺序错了，证明就废了。
+
+总结一句让你醍醐灌顶的话：
+
+在Sui里，安全 = 合约代码正确。
+在ZK里，安全 = （输入 → Python计算 → Witness） + （Witness → Circom约束 → Proof） + （Proof → Solidity验证）。
+这三段链条，缺一段都不叫ZK审计，那叫“只看了一半”。
+
+现在回头去看那个 WTF-zk/02_Prime 教程，它的Python代码就是链条的第一段（输入→计算），而你没看到的 .circom 文件在后面的课程里（链条第二段）。以后接到单子，直接问项目方要 “Witness生成脚本” 和 “电路文件”，二者缺一不可。
