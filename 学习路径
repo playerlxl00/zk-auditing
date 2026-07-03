@@ -1,0 +1,211 @@
+基础学习
+· WTF-zk教程：目标是让仅有高中数学基础的人也能入门。教程会使用Python复现算法，适合边学边练。访问：github.com/WTFAcademy/WTF-zk
+
+· ZKM教育中心：提供从入门到专业级的精选课程。第一门课程“零知识和SNARKS高级入门”由资深密码学家讲授。访问：zkm.io/zh/education-hub
+
+📌 Zokyo Auditing Tutorials 的前置要求页面详细列出了这些知识点：
+https://zokyo-auditing-tutorials.gitbook.io/zokyo-tutorials/tutorial-16-zero-knowledge-zk/prerequisites
+
+阶段一：ZK 核心概念与密码学基础（2-4 周）
+1.1 理解 ZK 是什么
+先建立对零知识证明的整体认知：
+
+· 零知识证明初学者分步指南（MEXC，2026年1月）
+https://www.mexc.com （搜索"零知识证明 初学者 分步指南"）
+
+· Zokyo ZK 教程总览——从零知识证明的基本概念开始
+https://zokyo-auditing-tutorials.gitbook.io/zokyo-tutorials/tutorial-16-zero-knowledge-zk
+
+1.2 理解两大证明系统：zk-SNARK vs zk-STARK
+这是 ZK 领域最基本的分野：
+
+特性	        zk-SNARK	          zk-STARK
+证明大小	      小（~几百字节）	    大（~几KB）
+验证速度	      快	                快
+可信设置	      ✅ 需要	            ❌ 不需要
+量子安全	      ❌ 否	              ✅ 是
+
+· 全面比较：zk-SNARKs 和 zk-STARKs
+https://www.gate.com （搜索"全面比较 zk-SNARKs zk-STARKs"）
+
+· Chainlink 的 SNARK vs STARK 解读
+https://blog.chain.link （搜索"理解 zk-SNARKs 和 zk-STARKS 的区别"）
+
+1.3 数学与密码学基础
+ZK 证明的底层是数学：
+
+· 代数、数论、多项式方程的基本理解——这些是 ZK 的核心工具
+
+· 椭圆曲线密码学——zk-SNARK 的基础
+
+  · 推荐书籍：Elliptic Curve Cryptography for Developers（Manning Publications, 2025）
+
+· 有限域和模运算——理解电路中的算术约束
+
+阶段二：电路语言学习（4-8 周）
+ZK 审计的核心对象是 算术电路（Arithmetic Circuit） 。你需要至少熟练掌握一种主流电路语言。
+
+2.1 Circom（推荐首选）
+Circom 是目前最广泛使用的 ZK 电路语言，生态成熟，学习资源丰富。
+
+· Circom 官方教程——创建第一个 zkSnark 电路
+https://iden3-docs.readthedocs.io/en/latest/iden3_repos/circom/TUTORIAL.html
+
+· Circom 编译器文档（Remix IDE）
+https://remix-ide.readthedocs.io （搜索"Circom Compiler"）
+
+· Circom GitHub 仓库
+https://github.com/distributed-lab/circom
+
+学习目标：
+
+· 理解 signal（public/private）、constraint（<== 操作符）
+
+· 掌握模板（template）的编写和组合
+
+· 能够用 snarkjs 生成证明并进行链上/链下验证
+
+2.2 Halo2（进阶）
+Halo2 是基于 PLONK 的证明系统，使用 Rust 开发。
+
+· Halo2 Book 中文翻译——PLONK 系 ZK 证明的极佳入门材料
+https://trapdoor-tech.github.io/halo2-book-chinese/
+
+· Halo2 GitHub 仓库
+https://github.com/ttyhgo/halo2-lib
+
+学习目标：
+
+· 理解 PLONK 的算术化方式
+
+· 掌握 Halo2 的 Circuit trait 和芯片（chip）开发
+
+· 理解查找表（lookup table）和自定义门（custom gate）
+
+💡 建议从 Circom 入手，再过渡到 Halo2。两者的约束思维是相通的，但语法和抽象层次不同。
+
+阶段三：ZK 安全核心——漏洞类型与审计方法论（4-6 周）
+这是从"会写电路"到"会审电路"的关键阶段。
+
+3.1 ZK 漏洞分类框架
+ZK 漏洞可以围绕 ZKP 的三个核心属性来分类：
+
+1. 完备性（Completeness）问题——电路过度约束
+
+2. 可靠性（Soundness）问题——电路约束不足
+
+3. 零知识性（Zero-Knowledge）问题——信息泄露
+
+· ZK Security Framework（GitHub）
+https://github.com/Salusec/zksecurity-framework
+
+  · 包含完整的 ZK 漏洞分类、评级和审计检查清单
+
+  · 基于 ZK Bug Tracker 和学术论文构建
+
+3.2 最常见的 ZK 审计漏洞
+🔴 约束缺失（Missing Constraint / Under-constrained Circuit）
+
+这是 ZK 审计中最常见且最严重的漏洞类型。Veridise 的数据显示，90% 的约束缺失漏洞被评为 Critical 或 High 级别。
+
+典型场景：电路忘记对某个关键输入施加约束，攻击者可构造恶意证明通过验证。
+
+· Veridise 审计经验分享
+https://veridise.com/blog/learn-blockchain/lessons-from-the-auditing-trenches-what-do-zk-developers-get-wrong/
+
+🔴 "Frozen Heart" 漏洞
+
+Fiat-Shamir 转换实现不当导致的严重漏洞，影响 PlonK、Bulletproofs 等多个证明系统。
+
+· Bulletproofs 中的 Frozen Heart 漏洞分析
+https://cloud.tencent.com.cn （搜索"Bulletproofs Frozen Heart 漏洞"）
+
+🔴 可信设置泄露
+
+参数生成过程中敏感信息泄露，可能导致证明伪造。
+
+🔴 算术溢出/下溢
+
+有限域运算中的溢出问题。
+
+3.3 ZK 审计检查清单
+· PositiveSecurity ZK 审计指南
+https://github.com/PositiveSecurity/zk-audit-guide
+
+  · 包含针对算术电路和智能合约的完整检查清单
+
+· Zokyo 常见 ZK 漏洞目录
+https://zokyo-auditing-tutorials.gitbook.io/zokyo-tutorials/common-vulnerabilities-in-zk-code
+
+阶段四：实战审计练习（持续进行）
+4.1 学习真实审计案例
+· Trail of Bits 审计 Axiom Halo2 电路
+https://blog.trailofbits.com （搜索"Axiom Halo2 circuits"）
+
+  · 发现 35 个安全问题，包括多个可靠性和约束不足漏洞
+
+· Veridise circomlib 审计报告
+https://veridise.com （搜索"circomlib audit"）
+
+  · 发现 14 个问题，其中 9 个为 Critical 级别
+
+· 腾讯玄武实验室 gnark 漏洞挖掘（CVE-2025-57801）
+
+  · 自动化工具在 ZKP 库中发现高危签名可塑性漏洞
+
+4.2 使用审计工具
+· Picus——Veridise 开发的 ZK 电路漏洞检测工具
+https://veridise.com （搜索"Picus ZK"）
+
+  · 自动识别约束不足的电路
+
+· ZK Vanguard——ZK 静态代码分析器
+
+  · 检测约束不足、私有输入泄露、非确定性 witness 代码
+
+· CircuitShield——ZK 电路审计就绪报告工具
+https://www.npmjs.com/package/circuitshield
+
+4.3 实践建议
+1. 从简单电路开始审计：找一些开源的 Circom 电路（如 circomlib 中的组件），尝试独立审查
+
+2. 写负面测试：对每个约束，尝试传入"不应该通过"的输入，验证电路是否会拒绝
+
+3. 参与 CTF/审计比赛：看雪学苑等平台有智能合约审计比赛，可积累实战经验
+
+阶段五：持续学习资源
+社区与文档
+· Zokyo Auditing Tutorials 完整文档
+https://zokyo-auditing-tutorials.gitbook.io/zokyo-tutorials
+
+  · 从前置知识到常见漏洞的完整教程体系
+
+· ZK Bug Tracker
+https://github.com/0xPARC/zk-bug-tracker
+
+  · 社区维护的 ZK 漏洞追踪库
+
+· Zero-Knowledge Proof Vulnerability Analysis and Security Auditing（学术论文）
+https://eprint.iacr.org/2024/514
+
+书籍推荐
+· Modern Cryptography: From RSA to Zero-Knowledge and Beyond（MIT Press）
+
+· Mathematical Foundations of Cryptography（课程，TU Graz）
+
+GitHub 学习路线
+· ZK Roadmap by jonatascm
+https://github.com/jonatascm/zk-roadmap
+
+  · 结构：基础 → 电路 → 常见漏洞 → 掌握审计
+
+总结：学习路径时间线
+阶段	     内容	                        建议时长
+阶段零	     前置知识检查与补充	            1-2 周
+阶段一	     ZK 概念 + 密码学基础	        2-4 周
+阶段二	     Circom / Halo2 电路语言	      4-8 周
+阶段三	     ZK 漏洞类型与审计方法论	      4-6 周
+阶段四	     实战审计 + 工具使用	          持续进行
+阶段五	     社区参与 + 持续学习	          长期
+
+💡 最重要的一点：ZK 审计和智能合约审计最大的不同在于——智能合约审计看的是"逻辑有没有漏洞"，而 ZK 审计看的是"约束有没有缺失"。一个缺失的约束，可能意味着攻击者可以凭空构造有效证明。时刻带着"这个值有没有被约束？"的问题去审查每一行电路代码。
