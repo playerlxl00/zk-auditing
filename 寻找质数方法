@@ -1,0 +1,111 @@
+一，确定性算法
+方法1：埃拉托斯特尼筛法（Sieve of Eratosthenes）
+
+python
+def sieve_of_eratosthenes(n):
+    primes = [True] * (n + 1)
+    primes[0] = primes[1] = False
+    for i in range(2, int(n**0.5) + 1):
+        if primes[i]:
+            for j in range(i * i, n + 1, i):
+                primes[j] = False
+    return [x for x in range(n + 1) if primes[x]]
+
+# 示例：找出小于等于20的所有质数
+limit = 20
+prime_numbers = sieve_of_eratosthenes(limit)
+print(f'小于等于{limit}的质数: {prime_numbers}')
+# 小于等于20的质数: [2, 3, 5, 7, 11, 13, 17, 19]
+
+埃拉托斯特尼筛法的核心思路是排除法：
+
+假设从 2 到 n 的所有数都是质数。从最小的质数 2 开始，将其所有倍数（4、6、8、…）标记为“不是质数”。然后找到下一个未被标记的数（即质数），再将其倍数全部标记。
+重复这个过程，直到处理完所有不超过n**1/2的质数为止。
+为什么只需处理到n**1/2?
+因为如果 n 是合数，那么它必定有一个因子不大于n**1/2，如果在n**1/2之前都没找到它的因子，那n就不可能是合数，只能是质数。因此，标记到n**1/2就足以筛掉所有合数。
+
+方法2：卢卡斯-莱默检验法 (Lucas-Lehmer)
+
+def lucas_lehmer(p):
+    if p == 2:
+        return True
+    if p < 2 or p % 2 == 0:
+        return False
+    m = (1 << p) - 1  # 2^p - 1
+    s = 4
+    for _ in range(p - 2):
+        s = (s * s - 2) % m
+    return s == 0
+
+# 测试
+print(lucas_lehmer(5))  # True (31是质数)
+print(lucas_lehmer(11)) # True (2047是合数，但p=11, 2^11-1=2047=23*89)
+
+方法3：AKS 素性测试 (Agrawal–Kayal–Saxena)
+
+import math
+def aks_primality(n):
+    if n < 2: return False
+    # Step 1: 检查是否为完全幂次方
+    for a in range(2, int(math.isqrt(n)) + 1):
+        if n % a == 0: return False  # 简化版，实际要检查 n = a^b
+    # Step 2: 寻找最小 r 使 ord_r(n) > log2(n)^2
+    # ... (省略数百行数学实现，教科书中一般不自带)
+    # 实际无人用此实现，此处仅示意
+    return True  # 伪代码占位
+
+二，随机算法
+方法1：费马素性检验 (Fermat Primality Test)
+
+import random
+def fermat_test(n, k=5):
+    if n < 2: return False
+    if n == 2: return True
+    if n % 2 == 0: return False
+    for _ in range(k):
+        a = random.randint(2, n - 2)
+        if pow(a, n - 1, n) != 1:
+            return False
+    return True
+
+# 测试
+print(fermat_test(17))   # True
+print(fermat_test(561))  # True (卡迈克尔数，伪质数)
+
+方法2：米勒-拉宾检验 (Miller-Rabin) —— 重点中的重点
+
+import random
+def miller_rabin(n, k=12):
+    if n < 2: return False
+    if n == 2 or n == 3: return True
+    if n % 2 == 0: return False
+
+    # 写出 n-1 = d * 2^s
+    d = n - 1
+    s = 0
+    while d % 2 == 0:
+        d //= 2
+        s += 1
+
+    for _ in range(k):
+        a = random.randint(2, n - 2)
+        x = pow(a, d, n)
+        if x == 1 or x == n - 1:
+            continue
+        for _ in range(s - 1):
+            x = (x * x) % n
+            if x == n - 1:
+                break
+        else:
+            return False
+    return True
+
+# 测试
+print(miller_rabin(101))   # True
+print(miller_rabin(561))   # False (卡迈克尔数被正确识别)
+
+
+
+
+
+
